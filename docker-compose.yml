@@ -1,0 +1,26 @@
+services:
+  # Day-to-day development: hot-reloading Vite dev server, source bind-mounted from the host.
+  # Run with: docker compose up dev
+  dev:
+    build:
+      context: .
+      target: dev
+    ports:
+      - "5173:5173"
+    volumes:
+      - .:/app
+      - /app/node_modules
+    environment:
+      # Bind-mounted volumes don't always deliver native filesystem-change events (notably on
+      # Docker Desktop for Windows/Mac), so Vite falls back to polling for reliable hot reload.
+      - CHOKIDAR_USEPOLLING=true
+
+  # Serves the production build via nginx, for checking the real build output locally before
+  # deploying. Run with: docker compose --profile prod up preview
+  preview:
+    build:
+      context: .
+      target: prod
+    ports:
+      - "8080:80"
+    profiles: ["prod"]

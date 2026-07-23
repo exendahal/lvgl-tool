@@ -7,4 +7,10 @@ export default defineConfig({
   build: {
     target: 'es2020',
   },
+  server: {
+    // Bind all interfaces by default so the dev server is reachable from outside a container
+    // without needing to remember the --host flag; harmless for plain local `npm run dev` too.
+    host: true,
+    port: 5173,
+  },
 });
