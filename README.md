@@ -9,6 +9,9 @@ Built as an open, inspectable alternative to the official [lvgl.io/tools](https:
 converter for teams maintaining products across multiple LVGL versions, or anyone who'd rather
 see exactly what a converter emits than trust a black-box service.
 
+**🔗 Try it online: [exendahal.github.io/lvgl-tool](https://exendahal.github.io/lvgl-tool/)**
+*(live after the first tag is pushed — see [Deployment](#deployment))*
+
 ## Features
 
 - **Image Converter** — PNG/JPG/BMP/SVG → `lv_img_dsc_t` (v7/v8) or `lv_image_dsc_t` (v9) C
@@ -49,8 +52,7 @@ at the relevant spot:
 ## Tech stack
 
 Vite + vanilla TypeScript, no UI framework. `opentype.js` is lazy-loaded only when the Font
-Converter tab is opened, so the image-only path stays small. See `LVGL-Converter-PRD.md` for the
-full product spec this was built against.
+Converter tab is opened, so the image-only path stays small.
 
 ---
 
@@ -118,4 +120,16 @@ GitHub Pages. If your repo name differs from the root path, set `VITE_BASE` at b
 VITE_BASE=/your-repo-name/ npm run build
 ```
 
-A GitHub Actions workflow to automate this on push to `main` is not set up yet.
+`.github/workflows/deploy.yml` builds and publishes to GitHub Pages automatically whenever you
+push a tag:
+
+```bash
+git tag v1.0.0
+git push origin v1.0.0
+```
+
+It can also be triggered manually from the Actions tab (`workflow_dispatch`). `VITE_BASE` is set
+automatically from the repo name, so no manual config is needed there.
+
+**One-time setup**, before the first tag push: in the repo's **Settings → Pages**, set **Source**
+to **GitHub Actions** (it defaults to "Deploy from a branch", which this workflow doesn't use).
