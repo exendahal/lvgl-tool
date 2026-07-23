@@ -27,4 +27,8 @@ export function findFormat(version: LvglVersion, id: string): ColorFormatDef | u
   return PROFILES[version].formats.find((f) => f.id === id);
 }
 
+export function findFormatByMacro(version: LvglVersion, macro: string): ColorFormatDef | undefined {
+  return PROFILES[version].formats.find((f) => f.macro === macro);
+}
+
 export { V7_FORMATS, V8_FORMATS, V9_FORMATS };

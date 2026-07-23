@@ -50,7 +50,7 @@ export function encodeBinaryRaw(image: DecodedImage, variant: BinaryRawVariant):
  * verify it against the exact LVGL point release you're targeting before relying on this
  * output in production, since magic/header details can shift between minor versions.
  */
-const LV_IMAGE_HEADER_MAGIC = 0x19;
+export const LV_IMAGE_HEADER_MAGIC = 0x19;
 
 export function encodeV9Bin(format: ColorFormatDef, width: number, height: number, stride: number, combinedData: Uint8Array): Uint8Array {
   const w = new ByteWriter();
@@ -75,7 +75,7 @@ export function encodeV9Bin(format: ColorFormatDef, width: number, height: numbe
  * the safer path — see encodeCArray.ts). Cross-check against lv_color.h for the exact
  * LVGL point release before trusting a generated .bin in production.
  */
-const COLOR_FORMAT_NUMERIC: Record<string, number> = {
+export const COLOR_FORMAT_NUMERIC: Record<string, number> = {
   rgb565: 0x12,
   rgb888: 0x0f,
   argb8888: 0x10,

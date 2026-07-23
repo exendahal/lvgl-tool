@@ -11,6 +11,7 @@ import { combinePixelBytes, maybeRle } from './image/combine';
 import { downloadBytes, downloadText } from './ui/download';
 import { paintOnCheckerboard } from './ui/checkerboard';
 import { renderFormatReference } from './ui/formatReference';
+import { renderImportPanelHtml, wireImportPanel } from './ui/importPanel';
 
 const VERSION_STORAGE_KEY = 'lvgl-tool.version';
 
@@ -81,6 +82,9 @@ app.innerHTML = `
 
   <div class="tabs">
     <button id="tab-convert-btn" class="active">Image Converter</button>
+    <button id="tab-import-btn">Import &amp; Inspect</button>
+    <button id="tab-font-btn">Font Converter</button>
+    <button id="tab-font-import-btn">Font Import &amp; Inspect</button>
     <button id="tab-docs-btn">Format Reference</button>
   </div>
 
@@ -225,6 +229,18 @@ app.innerHTML = `
     </div>
   </section>
 
+  <section id="panel-import" class="panel">
+    ${renderImportPanelHtml()}
+  </section>
+
+  <section id="panel-font" class="panel">
+    <p class="note" id="font-panel-loading">Loading font engine (opentype.js)…</p>
+  </section>
+
+  <section id="panel-font-import" class="panel">
+    <p class="note">Loading…</p>
+  </section>
+
   <section id="panel-docs" class="panel">
     ${renderFormatReference()}
   </section>
@@ -236,8 +252,14 @@ const $ = <T extends HTMLElement>(id: string): T => document.getElementById(id) 
 
 const versionSelect = $<HTMLSelectElement>('version-select');
 const tabConvertBtn = $<HTMLButtonElement>('tab-convert-btn');
+const tabImportBtn = $<HTMLButtonElement>('tab-import-btn');
+const tabFontBtn = $<HTMLButtonElement>('tab-font-btn');
+const tabFontImportBtn = $<HTMLButtonElement>('tab-font-import-btn');
 const tabDocsBtn = $<HTMLButtonElement>('tab-docs-btn');
 const panelConvert = $<HTMLDivElement>('panel-convert');
+const panelImport = $<HTMLDivElement>('panel-import');
+const panelFont = $<HTMLDivElement>('panel-font');
+const panelFontImport = $<HTMLDivElement>('panel-font-import');
 const panelDocs = $<HTMLDivElement>('panel-docs');
 
 const dropZone = $<HTMLDivElement>('drop-zone');
@@ -486,25 +508,59 @@ function renderResult(): void {
 
 // ---- Event wiring ----
 
+let fontPanelApi: { onVersionChange: () => void } | null = null;
+let fontPanelLoading = false;
+
 versionSelect.value = state.version;
 versionSelect.addEventListener('change', () => {
   state.version = versionSelect.value as LvglVersion;
   localStorage.setItem(VERSION_STORAGE_KEY, state.version);
   populateFormatOptions();
+  fontPanelApi?.onVersionChange();
 });
 
-tabConvertBtn.addEventListener('click', () => {
-  tabConvertBtn.classList.add('active');
-  tabDocsBtn.classList.remove('active');
-  panelConvert.classList.add('active');
-  panelDocs.classList.remove('active');
+const allTabs = [
+  { btn: tabConvertBtn, panel: panelConvert },
+  { btn: tabImportBtn, panel: panelImport },
+  { btn: tabFontBtn, panel: panelFont },
+  { btn: tabFontImportBtn, panel: panelFontImport },
+  { btn: tabDocsBtn, panel: panelDocs },
+];
+function activateTab(target: HTMLButtonElement): void {
+  for (const { btn, panel } of allTabs) {
+    const active = btn === target;
+    btn.classList.toggle('active', active);
+    panel.classList.toggle('active', active);
+  }
+}
+tabConvertBtn.addEventListener('click', () => activateTab(tabConvertBtn));
+tabImportBtn.addEventListener('click', () => activateTab(tabImportBtn));
+tabDocsBtn.addEventListener('click', () => activateTab(tabDocsBtn));
+
+// Font engine (opentype.js, ~300KB) is only fetched once the user actually opens this tab,
+// so users converting images only never pay for it (PRD's explicit lazy-load requirement).
+tabFontBtn.addEventListener('click', () => {
+  activateTab(tabFontBtn);
+  if (fontPanelApi || fontPanelLoading) return;
+  fontPanelLoading = true;
+  import('./ui/fontPanel').then(({ renderFontPanelHtml, wireFontPanel }) => {
+    panelFont.innerHTML = renderFontPanelHtml();
+    fontPanelApi = wireFontPanel(panelFont, () => state.version);
+  });
 });
-tabDocsBtn.addEventListener('click', () => {
-  tabDocsBtn.classList.add('active');
-  tabConvertBtn.classList.remove('active');
-  panelDocs.classList.add('active');
-  panelConvert.classList.remove('active');
+
+let fontImportLoaded = false;
+tabFontImportBtn.addEventListener('click', () => {
+  activateTab(tabFontImportBtn);
+  if (fontImportLoaded) return;
+  fontImportLoaded = true;
+  import('./ui/fontImportPanel').then(({ renderFontImportPanelHtml, wireFontImportPanel }) => {
+    panelFontImport.innerHTML = renderFontImportPanelHtml();
+    wireFontImportPanel(panelFontImport);
+  });
 });
+
+wireImportPanel(panelImport);
 
 dropZone.addEventListener('click', () => fileInput.click());
 dropZone.addEventListener('dragover', (e) => {

@@ -1,0 +1,41 @@
+{
+    "name": "@types/opentype.js",
+    "version": "1.3.10",
+    "description": "TypeScript definitions for opentype.js",
+    "homepage": "https://github.com/DefinitelyTyped/DefinitelyTyped/tree/master/types/opentype.js",
+    "license": "MIT",
+    "contributors": [
+        {
+            "name": "Dan Marshall",
+            "githubUsername": "danmarshall",
+            "url": "https://github.com/danmarshall"
+        },
+        {
+            "name": "Edgar Simson",
+            "githubUsername": "edzis",
+            "url": "https://github.com/edzis"
+        },
+        {
+            "name": "Piotr Błażejewicz",
+            "githubUsername": "peterblazejewicz",
+            "url": "https://github.com/peterblazejewicz"
+        },
+        {
+            "name": "Alec Mev",
+            "githubUsername": "alecmev",
+            "url": "https://github.com/alecmev"
+        }
+    ],
+    "main": "",
+    "types": "index.d.ts",
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/DefinitelyTyped/DefinitelyTyped.git",
+        "directory": "types/opentype.js"
+    },
+    "scripts": {},
+    "dependencies": {},
+    "peerDependencies": {},
+    "typesPublisherContentHash": "380f73094abdca6f430421bfb065da5d9f4f0e57566f2b66c360f35b651eaca0",
+    "typeScriptVersion": "5.3"
+}

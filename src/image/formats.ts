@@ -1,5 +1,6 @@
 import type { ColorFormatDef, DecodedImage, EncodedPixels } from '../lib/types';
 import { ByteWriter } from '../lib/bytes';
+import { packRowAlignedBits } from '../lib/bitpack';
 import { ditherToPalette, ditherUniform } from '../lib/dither';
 import { buildPalette, nearestPaletteIndex, type PaletteEntry } from '../lib/quantize';
 
@@ -17,24 +18,6 @@ export interface PackOptions {
 function packRgb565(r: number, g: number, b: number): [lo: number, hi: number] {
   const v = ((r & 0xf8) << 8) | ((g & 0xfc) << 3) | (b >> 3);
   return [v & 0xff, (v >>> 8) & 0xff];
-}
-
-function packRowAlignedBits(values: ArrayLike<number>, width: number, height: number, bpp: number): { data: Uint8Array; stride: number } {
-  const stride = Math.ceil((width * bpp) / 8);
-  const out = new Uint8Array(stride * height);
-  const maxVal = (1 << bpp) - 1;
-  for (let y = 0; y < height; y++) {
-    let bitPos = 0;
-    const rowOffset = y * stride;
-    for (let x = 0; x < width; x++) {
-      const v = values[y * width + x] & maxVal;
-      const byteIdx = rowOffset + (bitPos >> 3);
-      const shift = 8 - bpp - (bitPos % 8);
-      out[byteIdx] |= v << shift;
-      bitPos += bpp;
-    }
-  }
-  return { data: out, stride };
 }
 
 function quantizeAlphaLevels(image: DecodedImage, bpp: number, dithering: boolean): Uint8Array {
@@ -214,7 +197,7 @@ export async function encodeRawPassthrough(file: File): Promise<EncodedPixels> {
   return { data: buf, stride: 0 };
 }
 
-function expandBits(value: number, bits: number): number {
+export function expandBits(value: number, bits: number): number {
   if (bits >= 8) return value;
   return (value << (8 - bits)) | (value >> (2 * bits - 8));
 }
