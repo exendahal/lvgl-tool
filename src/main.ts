@@ -1,10 +1,10 @@
 import './style.css';
-import type { BinaryRawVariant, ColorFormatDef, ConversionResult, DecodedImage, LvglVersion, OutputMode, TransparencyMode } from './lib/types';
+import type { BinaryRawVariant, ColorFormatDef, ColorRangeSettings, ConversionResult, DecodedImage, LvglVersion, OutputMode, TransparencyMode } from './lib/types';
 import { decodeImageFile, readSvgIntrinsicSize } from './lib/imageLoad';
 import { toCIdentifier } from './lib/bytes';
 import { getFormats, findFormat } from './profiles';
 import { packPixels, encodeRawPassthrough, buildPreviewRgba } from './image/formats';
-import { applyTransparency, autoSampleCornerColor, samplePixelColor, DEFAULT_CHROMA_COLOR } from './image/transparency';
+import { applyTransparency, autoSampleCornerColor, samplePixelColor, DEFAULT_CHROMA_COLOR, DEFAULT_COLOR_RANGE } from './image/transparency';
 import { generateCArrayFile } from './image/encodeCArray';
 import { encodeBinaryRaw, encodeV9Bin } from './image/encodeBinary';
 import { combinePixelBytes, maybeRle } from './image/combine';
@@ -28,6 +28,7 @@ interface AppState {
   pickedColor: [number, number, number];
   tolerance: number;
   feather: number;
+  colorRange: ColorRangeSettings;
   varName: string;
   fileNameBase: string;
   outputMode: OutputMode;
@@ -55,6 +56,7 @@ const state: AppState = {
   pickedColor: [...DEFAULT_CHROMA_COLOR],
   tolerance: 24,
   feather: 0,
+  colorRange: { ...DEFAULT_COLOR_RANGE },
   varName: 'img',
   fileNameBase: 'img',
   outputMode: 'carray',
@@ -138,6 +140,7 @@ app.innerHTML = `
               <option value="existingAlpha">Existing-alpha passthrough (use the source PNG's alpha channel)</option>
               <option value="colorPick">Color-pick transparency (pick a background color + tolerance)</option>
               <option value="chromaKey">Chroma-key (magic transparent color)</option>
+              <option value="colorRange">Color range (per-channel min/max box, optional grey-only gate)</option>
             </select>
           </div>
           <div id="transparency-controls" style="display:none">
@@ -158,6 +161,55 @@ app.innerHTML = `
             <div class="field" id="feather-row">
               <label for="feather-slider">Edge feather / despill radius (<span id="feather-value">0</span>px)</label>
               <input type="range" id="feather-slider" min="0" max="8" value="0" />
+            </div>
+            <div id="color-range-controls" style="display:none">
+              <p class="note">Makes a pixel transparent when its R/G/B all fall inside (or, inverted, outside) these ranges. Matches a per-channel range + grey-detection workflow rather than a single picked color.</p>
+              <div class="row field">
+                <div>
+                  <label for="range-r-min">R min</label>
+                  <input type="number" id="range-r-min" min="0" max="255" value="240" />
+                </div>
+                <div>
+                  <label for="range-r-max">R max</label>
+                  <input type="number" id="range-r-max" min="0" max="255" value="255" />
+                </div>
+              </div>
+              <div class="row field">
+                <div>
+                  <label for="range-g-min">G min</label>
+                  <input type="number" id="range-g-min" min="0" max="255" value="240" />
+                </div>
+                <div>
+                  <label for="range-g-max">G max</label>
+                  <input type="number" id="range-g-max" min="0" max="255" value="255" />
+                </div>
+              </div>
+              <div class="row field">
+                <div>
+                  <label for="range-b-min">B min</label>
+                  <input type="number" id="range-b-min" min="0" max="255" value="240" />
+                </div>
+                <div>
+                  <label for="range-b-max">B max</label>
+                  <input type="number" id="range-b-max" min="0" max="255" value="255" />
+                </div>
+              </div>
+              <div class="checkbox-field field">
+                <input type="checkbox" id="range-invert" />
+                <label for="range-invert" style="margin:0">Invert (make transparent everything OUTSIDE the range)</label>
+              </div>
+              <div class="checkbox-field field">
+                <input type="checkbox" id="range-grey-only" checked />
+                <label for="range-grey-only" style="margin:0">Grey-only gate (only affect near-neutral pixels within the range)</label>
+              </div>
+              <div class="field" id="range-grey-tolerance-row">
+                <label for="range-grey-tolerance">Grey tolerance (<span id="range-grey-tolerance-value">50</span>)</label>
+                <input type="range" id="range-grey-tolerance" min="0" max="255" value="50" />
+              </div>
+              <div class="checkbox-field field">
+                <input type="checkbox" id="range-protect-black" checked />
+                <label for="range-protect-black" style="margin:0">Never make pure black (#000000) transparent</label>
+              </div>
             </div>
           </div>
           <p class="note warn" id="transparency-disabled-note" style="display:none">This color format has no alpha or chroma-key support for the selected LVGL version — transparency controls are disabled.</p>
@@ -340,7 +392,7 @@ function updateFormatDependentUI(): void {
   // Chroma-key mode only makes sense when the format actually supports it (vs. plain alpha).
   const chromaOption = transparencyModeSelect.querySelector<HTMLOptionElement>('option[value="chromaKey"]')!;
   chromaOption.disabled = !format.supportsChroma;
-  const alphaOptions = ['existingAlpha', 'colorPick'];
+  const alphaOptions = ['existingAlpha', 'colorPick', 'colorRange'];
   alphaOptions.forEach((v) => {
     const opt = transparencyModeSelect.querySelector<HTMLOptionElement>(`option[value="${v}"]`)!;
     opt.disabled = !format.supportsAlpha;
@@ -348,7 +400,7 @@ function updateFormatDependentUI(): void {
   const modeStillValid =
     state.transparencyMode === 'none' ||
     (state.transparencyMode === 'chromaKey' && format.supportsChroma) ||
-    (['existingAlpha', 'colorPick'].includes(state.transparencyMode) && format.supportsAlpha);
+    (['existingAlpha', 'colorPick', 'colorRange'].includes(state.transparencyMode) && format.supportsAlpha);
   if (!modeStillValid) {
     state.transparencyMode = 'none';
     transparencyModeSelect.value = 'none';
@@ -460,6 +512,7 @@ function runConvert(): void {
         pickedColor: state.pickedColor,
         tolerance: state.tolerance,
         feather: state.feather,
+        colorRange: state.colorRange,
       }, format);
       const packOpts = { colorDepth: state.colorDepth, dithering: state.dithering };
       const packed = packPixels(transparent, format, packOpts);
@@ -610,6 +663,8 @@ transparencyModeSelect.addEventListener('change', () => {
 const toleranceRow = $<HTMLDivElement>('tolerance-row');
 const featherRow = $<HTMLDivElement>('feather-row');
 const colorPickRow = $<HTMLDivElement>('color-pick-row');
+const colorRangeControls = $<HTMLDivElement>('color-range-controls');
+const rangeGreyToleranceRow = $<HTMLDivElement>('range-grey-tolerance-row');
 
 function updateTransparencyControlsVisibility(): void {
   transparencyControls.style.display = state.transparencyMode === 'none' ? 'none' : 'block';
@@ -617,11 +672,57 @@ function updateTransparencyControlsVisibility(): void {
   colorPickRow.style.display = needsColor ? 'flex' : 'none';
   toleranceRow.style.display = needsColor ? 'block' : 'none';
   featherRow.style.display = state.transparencyMode === 'colorPick' || state.transparencyMode === 'existingAlpha' ? 'block' : 'none';
+  colorRangeControls.style.display = state.transparencyMode === 'colorRange' ? 'block' : 'none';
+  rangeGreyToleranceRow.style.display = state.colorRange.greyOnly ? 'block' : 'none';
 }
 
 chromaColorInput.addEventListener('input', () => {
   const hex = chromaColorInput.value.replace('#', '');
   state.pickedColor = [parseInt(hex.slice(0, 2), 16), parseInt(hex.slice(2, 4), 16), parseInt(hex.slice(4, 6), 16)];
+});
+
+const rangeRMin = $<HTMLInputElement>('range-r-min');
+const rangeRMax = $<HTMLInputElement>('range-r-max');
+const rangeGMin = $<HTMLInputElement>('range-g-min');
+const rangeGMax = $<HTMLInputElement>('range-g-max');
+const rangeBMin = $<HTMLInputElement>('range-b-min');
+const rangeBMax = $<HTMLInputElement>('range-b-max');
+const rangeInvert = $<HTMLInputElement>('range-invert');
+const rangeGreyOnly = $<HTMLInputElement>('range-grey-only');
+const rangeGreyTolerance = $<HTMLInputElement>('range-grey-tolerance');
+const rangeGreyToleranceValue = $<HTMLSpanElement>('range-grey-tolerance-value');
+const rangeProtectBlack = $<HTMLInputElement>('range-protect-black');
+
+function clamp255(v: number): number {
+  return Math.max(0, Math.min(255, Math.round(v) || 0));
+}
+
+[
+  [rangeRMin, 'rMin'],
+  [rangeRMax, 'rMax'],
+  [rangeGMin, 'gMin'],
+  [rangeGMax, 'gMax'],
+  [rangeBMin, 'bMin'],
+  [rangeBMax, 'bMax'],
+].forEach(([input, key]) => {
+  (input as HTMLInputElement).addEventListener('input', () => {
+    state.colorRange[key as 'rMin' | 'rMax' | 'gMin' | 'gMax' | 'bMin' | 'bMax'] = clamp255(parseInt((input as HTMLInputElement).value, 10));
+  });
+});
+
+rangeInvert.addEventListener('change', () => {
+  state.colorRange.invert = rangeInvert.checked;
+});
+rangeGreyOnly.addEventListener('change', () => {
+  state.colorRange.greyOnly = rangeGreyOnly.checked;
+  updateTransparencyControlsVisibility();
+});
+rangeGreyTolerance.addEventListener('input', () => {
+  state.colorRange.greyTolerance = parseInt(rangeGreyTolerance.value, 10);
+  rangeGreyToleranceValue.textContent = rangeGreyTolerance.value;
+});
+rangeProtectBlack.addEventListener('change', () => {
+  state.colorRange.protectPureBlack = rangeProtectBlack.checked;
 });
 
 pickFromImageBtn.addEventListener('click', () => {

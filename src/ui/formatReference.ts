@@ -42,6 +42,16 @@ export function renderFormatReference(): string {
       </tbody>
     </table>
 
+    <p>The transparency workflow has four modes, chosen based on the picked color format's
+    <code>supportsAlpha</code>/<code>supportsChroma</code> capability: existing-alpha passthrough,
+    single-color-pick (+ tolerance), chroma-key, and <strong>color range</strong> — independent
+    min/max bounds per R/G/B channel, an invert toggle, and an optional grey-only gate that
+    restricts the effect to near-neutral pixels so a wide background range doesn't punch through
+    saturated icon artwork. Color range mode only takes effect on formats with a real alpha
+    channel (e.g. <code>TRUE_COLOR_ALPHA</code>, <code>ARGB8888</code>) — picking a non-alpha
+    format like plain <code>TRUE_COLOR</code> forces full opacity regardless of the transparency
+    settings, since there's nowhere in that format's packed bytes to store per-pixel alpha.</p>
+
     <h3>Struct layout notes</h3>
     <p><strong>v7/v8</strong> <code>lv_img_dsc_t</code> packs a bitfield header (cf : 5, always_zero : 3,
     reserved : 2, w : 11, h : 11) followed by <code>data_size</code> and a <code>data</code> pointer.</p>

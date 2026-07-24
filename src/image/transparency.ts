@@ -106,6 +106,52 @@ function applyChromaKey(image: DecodedImage, settings: TransparencySettings): De
   return out;
 }
 
+/**
+ * Range-based transparency: independent min/max bounds per R/G/B channel (a color-space box),
+ * with an optional invert (make transparent everything OUTSIDE the box instead of inside) and
+ * an optional grey-only gate (only affect near-neutral pixels, so a wide background range can
+ * overlap a saturated icon color without punching through the icon's actual artwork).
+ *
+ * Modeled on a proven in-house icon-transparency script that operates similarly, with one
+ * deliberate deviation: that script's "exclude" branch had an operator-precedence bug that
+ * silently dropped the blue-channel bound from the exclude/invert check. This implementation
+ * uses the straightforward, fully-specified interpretation (invert = logical negation of the
+ * box test) instead of reproducing that bug.
+ */
+function applyColorRange(image: DecodedImage, settings: TransparencySettings): DecodedImage {
+  const out = cloneImage(image);
+  const { rMin, rMax, gMin, gMax, bMin, bMax, invert, greyOnly, greyTolerance, protectPureBlack } = settings.colorRange;
+  const { width, height, data } = out;
+
+  for (let i = 0; i < width * height; i++) {
+    const o = i * 4;
+    const r = data[o];
+    const g = data[o + 1];
+    const b = data[o + 2];
+
+    if (protectPureBlack && r === 0 && g === 0 && b === 0) continue;
+
+    const included = r >= rMin && r <= rMax && g >= gMin && g <= gMax && b >= bMin && b <= bMax;
+    const isGrey = Math.abs(g - b) <= greyTolerance && Math.abs(g - r) <= greyTolerance && Math.abs(b - r) <= greyTolerance;
+
+    let makeTransparent: boolean;
+    if (!invert) {
+      makeTransparent = greyOnly ? included && isGrey : included;
+    } else {
+      makeTransparent = greyOnly ? !(included && isGrey) : !included;
+    }
+
+    if (makeTransparent) data[o + 3] = 0;
+  }
+
+  if (settings.feather > 0) {
+    featherAlpha(out, settings.feather);
+    // No single "background color" to despill against in range mode — the box can span many
+    // hues — so edge cleanup here is feathering only, not color decontamination.
+  }
+  return out;
+}
+
 function flattenAlpha(image: DecodedImage): DecodedImage {
   const out = cloneImage(image);
   for (let i = 3; i < out.data.length; i += 4) out.data[i] = 255;
@@ -133,8 +179,23 @@ export function applyTransparency(image: DecodedImage, settings: TransparencySet
       return applyColorPick(image, settings);
     case 'chromaKey':
       return applyChromaKey(image, settings);
+    case 'colorRange':
+      return applyColorRange(image, settings);
   }
 }
+
+export const DEFAULT_COLOR_RANGE: TransparencySettings['colorRange'] = {
+  rMin: 0xf0,
+  rMax: 0xff,
+  gMin: 0xf0,
+  gMax: 0xff,
+  bMin: 0xf0,
+  bMax: 0xff,
+  invert: false,
+  greyOnly: true,
+  greyTolerance: 50,
+  protectPureBlack: true,
+};
 
 /** Default chroma-key color per LVGL convention. */
 export const DEFAULT_CHROMA_COLOR: [number, number, number] = [0xff, 0x00, 0xff];

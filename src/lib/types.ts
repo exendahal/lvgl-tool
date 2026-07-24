@@ -29,7 +29,26 @@ export interface ColorFormatDef {
   supportsRle?: boolean;
 }
 
-export type TransparencyMode = 'none' | 'existingAlpha' | 'colorPick' | 'chromaKey';
+export type TransparencyMode = 'none' | 'existingAlpha' | 'colorPick' | 'chromaKey' | 'colorRange';
+
+export interface ColorRangeSettings {
+  rMin: number;
+  rMax: number;
+  gMin: number;
+  gMax: number;
+  bMin: number;
+  bMax: number;
+  /** Invert the box test: make transparent what's OUTSIDE the range instead of inside. */
+  invert: boolean;
+  /** Only affect near-neutral (grey/white/black) pixels — lets a background range overlap a
+   * saturated icon color without punching through the icon's actual artwork. */
+  greyOnly: boolean;
+  /** Max pairwise channel difference (R-G, G-B, B-R) still considered "grey". */
+  greyTolerance: number;
+  /** Never touch pure black (0,0,0) regardless of the range/grey rules — common for icon sets
+   * where black is always outline ink, never background. */
+  protectPureBlack: boolean;
+}
 
 export interface TransparencySettings {
   mode: TransparencyMode;
@@ -39,6 +58,7 @@ export interface TransparencySettings {
   tolerance: number;
   /** Feather/despill the transparent edge by this many pixels (0 = off). */
   feather: number;
+  colorRange: ColorRangeSettings;
 }
 
 export interface EncodedPixels {
