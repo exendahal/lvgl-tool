@@ -82,12 +82,27 @@ app.innerHTML = `
     </select>
   </div>
 
-  <div class="tabs">
-    <button id="tab-convert-btn" class="active">Image Converter</button>
-    <button id="tab-import-btn">Import &amp; Inspect</button>
-    <button id="tab-font-btn">Font Converter</button>
-    <button id="tab-font-import-btn">Font Import &amp; Inspect</button>
-    <button id="tab-docs-btn">Format Reference</button>
+  <div class="tabs-bar">
+    <div class="tab-group">
+      <span class="tab-group-label">Images</span>
+      <div class="tabs">
+        <button id="tab-convert-btn" class="active">Image Converter</button>
+        <button id="tab-import-btn">Image Import &amp; Inspect</button>
+      </div>
+    </div>
+    <div class="tab-group">
+      <span class="tab-group-label">Fonts</span>
+      <div class="tabs">
+        <button id="tab-font-btn">Font Converter</button>
+        <button id="tab-font-import-btn">Font Import &amp; Inspect</button>
+      </div>
+    </div>
+    <div class="tab-group">
+      <span class="tab-group-label">&nbsp;</span>
+      <div class="tabs">
+        <button id="tab-docs-btn">Format Reference</button>
+      </div>
+    </div>
   </div>
 
   <section id="panel-convert" class="panel active">

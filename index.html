@@ -4,11 +4,58 @@
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>LVGL Asset Converter</title>
-    <meta name="description" content="Client-side LVGL font & image converter for v7, v8 and v9. Nothing you upload leaves your browser." />
+    <title>LVGL Asset Converter — LVGL Image Converter & Viewer, Font Converter & Viewer</title>
+    <meta name="description" content="Free, open-source LVGL image converter and viewer, plus an LVGL font converter and viewer — 100% client-side, for LVGL v7, v8, and v9. Convert images and fonts to LVGL C arrays or binaries, or decode existing LVGL .c/.bin files back into a preview. Nothing you upload ever leaves your browser." />
+    <link rel="canonical" href="https://exendahal.github.io/lvgl-tool/" />
+
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="LVGL Asset Converter — Image & Font Converter and Viewer" />
+    <meta property="og:description" content="Free, open-source LVGL image converter and viewer, and LVGL font converter and viewer, for v7/v8/v9 — 100% client-side." />
+    <meta property="og:url" content="https://exendahal.github.io/lvgl-tool/" />
+    <meta name="twitter:card" content="summary" />
+    <meta name="twitter:title" content="LVGL Asset Converter — Image & Font Converter and Viewer" />
+    <meta name="twitter:description" content="Free, open-source LVGL image converter and viewer, and LVGL font converter and viewer, for v7/v8/v9." />
+
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "WebApplication",
+        "name": "LVGL Asset Converter",
+        "url": "https://exendahal.github.io/lvgl-tool/",
+        "description": "Free, open-source, 100% client-side tool that works as an LVGL image converter and viewer, and an LVGL font converter and viewer, for LVGL v7, v8, and v9. Converts image and font assets into LVGL-compatible C arrays or binaries, and can decode existing LVGL .c/.bin asset files back into a preview.",
+        "applicationCategory": "DeveloperApplication",
+        "operatingSystem": "Any (runs in-browser)",
+        "featureList": [
+          "LVGL image converter (PNG/JPG/BMP/SVG to LVGL C array or binary, v7/v8/v9)",
+          "LVGL image viewer (decode an existing LVGL image .c or .bin file back into a preview)",
+          "LVGL font converter (TTF/OTF/WOFF to lv_font_t, v7/v8/v9)",
+          "LVGL font viewer (decode an existing LVGL font .c file into a glyph grid preview)"
+        ],
+        "offers": {
+          "@type": "Offer",
+          "price": "0",
+          "priceCurrency": "USD"
+        }
+      }
+    </script>
   </head>
   <body>
-    <div id="app"></div>
+    <div id="app">
+      <!-- Static fallback content, visible before JS runs and to crawlers that don't execute it;
+           main.ts replaces this with the real app on load. Kept in sync with the app's actual
+           tab names/capabilities so it's accurate, not just SEO filler. -->
+      <main style="max-width: 720px; margin: 2rem auto; padding: 0 1.5rem; font-family: system-ui, sans-serif; color: #e2e8f0; background: #0f172a;">
+        <h1>LVGL Asset Converter</h1>
+        <p>A free, open-source <strong>LVGL image converter and viewer</strong>, and <strong>LVGL font converter and viewer</strong> — 100% client-side, for LVGL v7, v8, and v9. Nothing you upload ever leaves your browser.</p>
+        <ul>
+          <li><strong>Image Converter</strong> — PNG/JPG/BMP/SVG to LVGL C array or binary</li>
+          <li><strong>Image Import &amp; Inspect (viewer)</strong> — decode an existing LVGL image .c or .bin file</li>
+          <li><strong>Font Converter</strong> — TTF/OTF/WOFF to <code>lv_font_t</code></li>
+          <li><strong>Font Import &amp; Inspect (viewer)</strong> — decode an existing LVGL font .c file into a glyph grid</li>
+        </ul>
+        <p>Loading the app…</p>
+      </main>
+    </div>
     <script type="module" src="/src/main.ts"></script>
   </body>
 </html>
