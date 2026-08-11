@@ -1,4 +1,6 @@
 import './style.css';
+import logoUrl from './image/lvgl-logo-square-colored.png';
+import { ICONS } from './ui/icons';
 import type { BinaryRawVariant, ColorFormatDef, ColorRangeSettings, ConversionResult, DecodedImage, LvglVersion, OutputMode, TransparencyMode } from './lib/types';
 import { decodeImageFile, readSvgIntrinsicSize } from './lib/imageLoad';
 import { toCIdentifier } from './lib/bytes';
@@ -12,8 +14,9 @@ import { downloadBytes, downloadText } from './ui/download';
 import { paintOnCheckerboard } from './ui/checkerboard';
 import { renderFormatReference } from './ui/formatReference';
 import { renderImportPanelHtml, wireImportPanel } from './ui/importPanel';
+import { loadJson, saveJson } from './lib/persist';
 
-const VERSION_STORAGE_KEY = 'lvgl-tool.version';
+const IMAGE_OPTIONS_KEY = 'lvgl-tool.image-options';
 
 interface AppState {
   version: LvglVersion;
@@ -38,69 +41,105 @@ interface AppState {
   pickingFromImage: boolean;
 }
 
-function loadPersistedVersion(): LvglVersion {
-  const saved = localStorage.getItem(VERSION_STORAGE_KEY);
-  return saved === 'v7' || saved === 'v8' || saved === 'v9' ? saved : 'v9';
-}
+/** The subset of AppState worth remembering across visits — everything a user picks/configures,
+ * not transient per-file state like the loaded image or the last conversion result. */
+type PersistedImageOptions = Pick<
+  AppState,
+  'version' | 'formatId' | 'colorDepth' | 'dithering' | 'transparencyMode' | 'pickedColor' | 'tolerance' | 'feather' | 'colorRange' | 'outputMode' | 'binaryVariant' | 'rle'
+>;
+
+const savedOptions = loadJson<PersistedImageOptions>(IMAGE_OPTIONS_KEY) ?? {};
+const savedVersion = savedOptions.version;
 
 const state: AppState = {
-  version: loadPersistedVersion(),
+  version: savedVersion === 'v7' || savedVersion === 'v8' || savedVersion === 'v9' ? savedVersion : 'v9',
   file: null,
   decodedImage: null,
   svgWidth: 256,
   svgHeight: 256,
-  formatId: '',
-  colorDepth: 16,
-  dithering: false,
-  transparencyMode: 'none',
-  pickedColor: [...DEFAULT_CHROMA_COLOR],
-  tolerance: 24,
-  feather: 0,
-  colorRange: { ...DEFAULT_COLOR_RANGE },
+  formatId: savedOptions.formatId ?? '',
+  colorDepth: savedOptions.colorDepth ?? 16,
+  dithering: savedOptions.dithering ?? false,
+  transparencyMode: savedOptions.transparencyMode ?? 'none',
+  pickedColor: savedOptions.pickedColor ?? [...DEFAULT_CHROMA_COLOR],
+  tolerance: savedOptions.tolerance ?? 24,
+  feather: savedOptions.feather ?? 0,
+  colorRange: { ...DEFAULT_COLOR_RANGE, ...savedOptions.colorRange },
   varName: 'img',
   fileNameBase: 'img',
-  outputMode: 'carray',
-  binaryVariant: 'RGB565',
-  rle: false,
+  outputMode: savedOptions.outputMode ?? 'carray',
+  binaryVariant: savedOptions.binaryVariant ?? 'RGB565',
+  rle: savedOptions.rle ?? false,
   result: null,
   pickingFromImage: false,
 };
 
+function persistImageOptions(): void {
+  const toSave: PersistedImageOptions = {
+    version: state.version,
+    formatId: state.formatId,
+    colorDepth: state.colorDepth,
+    dithering: state.dithering,
+    transparencyMode: state.transparencyMode,
+    pickedColor: state.pickedColor,
+    tolerance: state.tolerance,
+    feather: state.feather,
+    colorRange: state.colorRange,
+    outputMode: state.outputMode,
+    binaryVariant: state.binaryVariant,
+    rle: state.rle,
+  };
+  saveJson(IMAGE_OPTIONS_KEY, toSave);
+}
+
 const app = document.querySelector<HTMLDivElement>('#app')!;
 app.innerHTML = `
   <header class="app-header">
-    <h1>LVGL Asset Converter</h1>
-    <div class="trust-banner">🔒 100% client-side — nothing you upload ever leaves your browser</div>
+    <div class="brand">
+      <img src="${logoUrl}" alt="LVGL logo" class="brand-logo" />
+      <h1>LVGL Asset Converter</h1>
+    </div>
+    <div class="header-right">
+      <a class="github-link" href="https://github.com/exendahal/lvgl-tool/" target="_blank" rel="noopener">
+        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 .5C5.65.5.5 5.65.5 12c0 5.09 3.29 9.4 7.86 10.93.57.1.78-.25.78-.55 0-.27-.01-1.17-.02-2.12-3.2.7-3.87-1.36-3.87-1.36-.53-1.33-1.28-1.69-1.28-1.69-1.04-.71.08-.7.08-.7 1.15.08 1.76 1.18 1.76 1.18 1.02 1.75 2.68 1.24 3.33.95.1-.74.4-1.24.72-1.53-2.55-.29-5.24-1.28-5.24-5.69 0-1.26.45-2.29 1.18-3.09-.12-.29-.51-1.46.11-3.05 0 0 .97-.31 3.18 1.18a11.1 11.1 0 0 1 5.79 0c2.2-1.49 3.17-1.18 3.17-1.18.63 1.59.24 2.76.12 3.05.74.8 1.18 1.83 1.18 3.09 0 4.42-2.7 5.4-5.26 5.68.41.36.78 1.06.78 2.14 0 1.55-.01 2.79-.01 3.17 0 .3.2.66.79.55A11.5 11.5 0 0 0 23.5 12C23.5 5.65 18.35.5 12 .5Z"/></svg>
+        GitHub
+      </a>
+      <div class="trust-banner">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="11" width="16" height="9" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>
+        100% client-side — nothing you upload ever leaves your browser
+      </div>
+      <div class="version-select">
+        <label for="version-select" style="margin:0;">LVGL version</label>
+        <select id="version-select">
+          <option value="v7">v7</option>
+          <option value="v8">v8</option>
+          <option value="v9">v9</option>
+        </select>
+      </div>
+    </div>
   </header>
 
-  <div class="version-select">
-    <label for="version-select" style="margin:0;">LVGL version</label>
-    <select id="version-select">
-      <option value="v7">v7</option>
-      <option value="v8">v8</option>
-      <option value="v9">v9</option>
-    </select>
-  </div>
+  <p class="hero-subtitle">Convert images and fonts to LVGL C arrays or binaries for v7/v8/v9, or decode existing LVGL asset files back into a preview — entirely in your browser.</p>
 
   <div class="tabs-bar">
     <div class="tab-group">
       <span class="tab-group-label">Images</span>
       <div class="tabs">
-        <button id="tab-convert-btn" class="active">Image Converter</button>
-        <button id="tab-import-btn">Image Import &amp; Inspect</button>
+        <button id="tab-convert-btn" class="active">${ICONS.image}Image Converter</button>
+        <button id="tab-import-btn">${ICONS.search}Image Import &amp; Inspect</button>
       </div>
     </div>
     <div class="tab-group">
       <span class="tab-group-label">Fonts</span>
       <div class="tabs">
-        <button id="tab-font-btn">Font Converter</button>
-        <button id="tab-font-import-btn">Font Import &amp; Inspect</button>
+        <button id="tab-font-btn">${ICONS.type}Font Converter</button>
+        <button id="tab-font-import-btn">${ICONS.search}Font Import &amp; Inspect</button>
       </div>
     </div>
     <div class="tab-group">
       <span class="tab-group-label">&nbsp;</span>
       <div class="tabs">
-        <button id="tab-docs-btn">Format Reference</button>
+        <button id="tab-docs-btn">${ICONS.book}Format Reference</button>
       </div>
     </div>
   </div>
@@ -108,8 +147,8 @@ app.innerHTML = `
   <section id="panel-convert" class="panel active">
     <div class="grid">
       <div>
-        <fieldset>
-          <legend>Source image</legend>
+        <div class="section">
+          <h3 class="section-heading">Source image</h3>
           <div id="drop-zone">Drop a PNG / JPG / BMP / SVG here, or click to choose a file</div>
           <input type="file" id="file-input" accept=".png,.jpg,.jpeg,.bmp,.svg,image/*" style="display:none" />
           <div class="row" id="svg-size-row" style="display:none">
@@ -123,10 +162,10 @@ app.innerHTML = `
             </div>
           </div>
           <p class="note" id="file-info"></p>
-        </fieldset>
+        </div>
 
-        <fieldset>
-          <legend>Color format</legend>
+        <div class="section">
+          <h3 class="section-heading">Color format</h3>
           <div class="field">
             <label for="format-select">Color format (options shown are only those valid for the selected LVGL version)</label>
             <select id="format-select"></select>
@@ -144,10 +183,10 @@ app.innerHTML = `
             <label for="dithering-checkbox" style="margin:0">Enable dithering (Floyd–Steinberg) for color-reduced/indexed formats</label>
           </div>
           <p class="note" id="raw-passthrough-note" style="display:none">Raw passthrough formats embed the original file bytes unmodified — color/dithering/transparency options don't apply.</p>
-        </fieldset>
+        </div>
 
-        <fieldset id="transparency-fieldset">
-          <legend>Transparency</legend>
+        <div class="section" id="transparency-section">
+          <h3 class="section-heading">Transparency</h3>
           <div class="field">
             <label for="transparency-mode">Approach</label>
             <select id="transparency-mode">
@@ -178,7 +217,7 @@ app.innerHTML = `
               <input type="range" id="feather-slider" min="0" max="8" value="0" />
             </div>
             <div id="color-range-controls" style="display:none">
-              <p class="note">Makes a pixel transparent when its R/G/B all fall inside (or, inverted, outside) these ranges. Matches a per-channel range + grey-detection workflow rather than a single picked color.</p>
+              <details class="hint"><summary>How color range mode works</summary><p>Makes a pixel transparent when its R/G/B all fall inside (or, inverted, outside) these ranges. Matches a per-channel range + grey-detection workflow rather than a single picked color.</p></details>
               <div class="row field">
                 <div>
                   <label for="range-r-min">R min</label>
@@ -228,10 +267,10 @@ app.innerHTML = `
             </div>
           </div>
           <p class="note warn" id="transparency-disabled-note" style="display:none">This color format has no alpha or chroma-key support for the selected LVGL version — transparency controls are disabled.</p>
-        </fieldset>
+        </div>
 
-        <fieldset>
-          <legend>Output</legend>
+        <div class="section">
+          <h3 class="section-heading">Output</h3>
           <div class="row field">
             <div>
               <label for="var-name-input">C variable name</label>
@@ -258,25 +297,25 @@ app.innerHTML = `
               <option value="RGB565_SWAPPED">RGB565 byte-swapped (big-endian)</option>
               <option value="RGB888">RGB888 (3 bytes/pixel)</option>
             </select>
-            <p class="note">Raw binary output packs straight R,G,B channel order and is not dithered in this version — pick a color format above for a dithered, transparency-aware C array instead.</p>
+            <details class="hint"><summary>About raw binary output</summary><p>Packs straight R,G,B channel order and is not dithered in this version — pick a color format above for a dithered, transparency-aware C array instead.</p></details>
           </div>
           <div class="checkbox-field field" id="rle-row" style="display:none">
             <input type="checkbox" id="rle-checkbox" />
             <label for="rle-checkbox" style="margin:0">RLE-compress (experimental, custom scheme — see Format Reference)</label>
           </div>
-        </fieldset>
+        </div>
 
         <div class="actions">
-          <button class="primary" id="convert-btn" disabled>Convert</button>
-          <button class="secondary" id="download-btn" disabled>Download</button>
-          <button class="secondary" id="copy-btn" disabled>Copy to clipboard</button>
+          <button class="primary" id="convert-btn" disabled>${ICONS.play}Convert</button>
+          <button class="secondary" id="download-btn" disabled>${ICONS.download}Download</button>
+          <button class="secondary" id="copy-btn" disabled>${ICONS.copy}Copy to clipboard</button>
         </div>
         <p class="status" id="status-msg"></p>
       </div>
 
       <div>
-        <fieldset>
-          <legend>Preview</legend>
+        <div class="card">
+          <h3 class="section-heading">Preview</h3>
           <div class="preview-row">
             <div class="preview-box">
               <canvas id="preview-before"></canvas>
@@ -287,11 +326,11 @@ app.innerHTML = `
               <div class="caption">Converted (simulated at target format precision)</div>
             </div>
           </div>
-        </fieldset>
-        <fieldset>
-          <legend>Generated output</legend>
+        </div>
+        <div class="card">
+          <h3 class="section-heading">Generated output</h3>
           <textarea id="output-text" readonly placeholder="Convert an image to see the generated C array here. Binary outputs won't render as text — use Download."></textarea>
-        </fieldset>
+        </div>
       </div>
     </div>
   </section>
@@ -582,10 +621,14 @@ let fontPanelLoading = false;
 versionSelect.value = state.version;
 versionSelect.addEventListener('change', () => {
   state.version = versionSelect.value as LvglVersion;
-  localStorage.setItem(VERSION_STORAGE_KEY, state.version);
   populateFormatOptions();
   fontPanelApi?.onVersionChange();
 });
+
+// Remember every image-converter option across visits — one delegated listener beats wiring
+// persistImageOptions() into two dozen individual input handlers.
+panelConvert.addEventListener('change', persistImageOptions);
+panelConvert.addEventListener('input', persistImageOptions);
 
 const allTabs = [
   { btn: tabConvertBtn, panel: panelConvert },
@@ -757,6 +800,7 @@ previewBefore.addEventListener('click', (e) => {
   chromaColorInput.value = '#' + color.map((c) => c.toString(16).padStart(2, '0')).join('');
   state.pickingFromImage = false;
   setStatus('Color picked.', 'ok');
+  persistImageOptions();
 });
 
 toleranceSlider.addEventListener('input', () => {
@@ -800,6 +844,39 @@ copyBtn.addEventListener('click', async () => {
   setStatus('Copied to clipboard.', 'ok');
 });
 
+// Reflects restored (or default) `state` values into the actual DOM controls — the HTML template
+// above renders with static default attributes, so a restored session needs this to show up.
+function syncControlsFromState(): void {
+  const colorDepthRadio = document.querySelector<HTMLInputElement>(`input[name="color-depth"][value="${state.colorDepth}"]`);
+  if (colorDepthRadio) colorDepthRadio.checked = true;
+
+  ditheringCheckbox.checked = state.dithering;
+  transparencyModeSelect.value = state.transparencyMode;
+  chromaColorInput.value = '#' + state.pickedColor.map((c) => c.toString(16).padStart(2, '0')).join('');
+
+  toleranceSlider.value = String(state.tolerance);
+  toleranceValue.textContent = String(state.tolerance);
+  featherSlider.value = String(state.feather);
+  featherValue.textContent = String(state.feather);
+
+  rangeRMin.value = String(state.colorRange.rMin);
+  rangeRMax.value = String(state.colorRange.rMax);
+  rangeGMin.value = String(state.colorRange.gMin);
+  rangeGMax.value = String(state.colorRange.gMax);
+  rangeBMin.value = String(state.colorRange.bMin);
+  rangeBMax.value = String(state.colorRange.bMax);
+  rangeInvert.checked = state.colorRange.invert;
+  rangeGreyOnly.checked = state.colorRange.greyOnly;
+  rangeGreyTolerance.value = String(state.colorRange.greyTolerance);
+  rangeGreyToleranceValue.textContent = String(state.colorRange.greyTolerance);
+  rangeProtectBlack.checked = state.colorRange.protectPureBlack;
+
+  outputModeSelect.value = state.outputMode;
+  binaryVariantSelect.value = state.binaryVariant;
+  rleCheckbox.checked = state.rle;
+}
+
 // ---- Init ----
+syncControlsFromState();
 populateFormatOptions();
 updateTransparencyControlsVisibility();

@@ -4,13 +4,14 @@ import { parseBin9 } from '../importer/parseBin9';
 import { decodeImageBytes, decodeRawPassthrough, type DecodeResult } from '../importer/decodeImage';
 import { findFormatByMacro, findFormat } from '../profiles';
 import { paintOnCheckerboard } from './checkerboard';
+import { ICONS } from './icons';
 
 export function renderImportPanelHtml(): string {
   return `
   <div class="grid">
     <div>
-      <fieldset>
-        <legend>Load an existing LVGL image source</legend>
+      <div class="section">
+        <h3 class="section-heading">Load an existing LVGL image source</h3>
         <div class="field">
           <label for="import-file-input">Upload a .c/.h source, or a v9 .bin file</label>
           <input type="file" id="import-file-input" accept=".c,.h,.bin,text/plain,application/octet-stream" />
@@ -34,14 +35,14 @@ export function renderImportPanelHtml(): string {
           </div>
         </div>
         <div class="actions">
-          <button class="primary" id="import-decode-btn">Decode &amp; preview</button>
+          <button class="primary" id="import-decode-btn">${ICONS.search}Decode &amp; preview</button>
         </div>
         <p class="status" id="import-status"></p>
-      </fieldset>
+      </div>
     </div>
     <div>
-      <fieldset>
-        <legend>Decoded preview</legend>
+      <div class="card">
+        <h3 class="section-heading">Decoded preview</h3>
         <div class="preview-row">
           <div class="preview-box" style="flex:2;">
             <div style="overflow:auto; max-height:420px; border:1px solid var(--border); border-radius:6px; display:inline-block;">
@@ -49,13 +50,13 @@ export function renderImportPanelHtml(): string {
             </div>
           </div>
         </div>
-      </fieldset>
-      <fieldset>
-        <legend>Metadata</legend>
+      </div>
+      <div class="card">
+        <h3 class="section-heading">Metadata</h3>
         <div id="import-metadata" class="note">Load and decode a file to see metadata here.</div>
         <div id="import-palette" style="display:flex; flex-wrap:wrap; gap:2px; margin-top:0.5rem;"></div>
         <ul id="import-notes" class="note" style="padding-left: 1.1rem;"></ul>
-      </fieldset>
+      </div>
     </div>
   </div>`;
 }

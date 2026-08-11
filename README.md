@@ -10,7 +10,6 @@ converter for teams maintaining products across multiple LVGL versions, or anyon
 see exactly what a converter emits than trust a black-box service.
 
 **🔗 Try it online: [exendahal.github.io/lvgl-tool](https://exendahal.github.io/lvgl-tool/)**
-*(live after the first tag is pushed — see [Deployment](#deployment))*
 
 ## Features
 
@@ -47,12 +46,6 @@ at the relevant spot:
   color-glyph/grayscale icon extraction, and no bundled `LV_SYMBOL_*` icon font (merge your own
   copy of it as a second source instead).
 - Batch conversion, zip download, and project save/reload (PRD §5.6) aren't built yet.
-- No automated CI/CD deploy to GitHub Pages yet — see [Deployment](#deployment).
-
-## Tech stack
-
-Vite + vanilla TypeScript, no UI framework. `opentype.js` is lazy-loaded only when the Font
-Converter tab is opened, so the image-only path stays small.
 
 ---
 
@@ -97,39 +90,3 @@ npm run dev        # dev server at http://localhost:5173
 | `npm run build` | Typecheck, then produce a production build in `dist/` |
 | `npm run preview` | Serve the built `dist/` locally (after `npm run build`) |
 | `npm run typecheck` | Typecheck only, no build output |
-
-### Project layout
-
-```
-src/
-  lib/         Shared primitives: types, image decode, dithering, quantization, byte/bit packing
-  profiles/    Per-LVGL-version color format definitions (v7/v8/v9)
-  image/       Image pixel-format encoders, transparency tools, C-array/binary writers
-  font/        Font parsing (opentype.js), Canvas rasterization, C/binary writers
-  importer/    Reverse direction: parse existing image/font .c or .bin sources back to pixels/glyphs
-  ui/          DOM wiring per tab (kept out of main.ts to keep lazy-loading boundaries clean)
-  main.ts      App shell: tabs, shared version-selector state, event wiring
-```
-
-### Deployment
-
-The app is fully static (`npm run build` → `dist/`) and deployable to any static host, including
-GitHub Pages. If your repo name differs from the root path, set `VITE_BASE` at build time:
-
-```bash
-VITE_BASE=/your-repo-name/ npm run build
-```
-
-`.github/workflows/deploy.yml` builds and publishes to GitHub Pages automatically whenever you
-push a tag:
-
-```bash
-git tag v1.0.0
-git push origin v1.0.0
-```
-
-It can also be triggered manually from the Actions tab (`workflow_dispatch`). `VITE_BASE` is set
-automatically from the repo name, so no manual config is needed there.
-
-**One-time setup**, before the first tag push: in the repo's **Settings → Pages**, set **Source**
-to **GitHub Actions** (it defaults to "Deploy from a branch", which this workflow doesn't use).
