@@ -1,11 +1,12 @@
 import { parseFontCSource, type DecodedFontGlyph } from '../importer/parseFontCSource';
+import { ICONS } from './icons';
 
 export function renderFontImportPanelHtml(): string {
   return `
   <div class="grid">
     <div>
-      <fieldset>
-        <legend>Load an existing LVGL font source</legend>
+      <div class="section">
+        <h3 class="section-heading">Load an existing LVGL font source</h3>
         <div class="field">
           <label for="font-import-file-input">Upload a font .c source</label>
           <input type="file" id="font-import-file-input" accept=".c,.h,text/plain" />
@@ -15,20 +16,20 @@ export function renderFontImportPanelHtml(): string {
           <textarea id="font-import-text-area" rows="10" style="width:100%; font-family: Consolas, monospace; font-size: 0.8rem;" placeholder="static const lv_font_fmt_txt_dsc_t my_font_dsc = { ... };"></textarea>
         </div>
         <div class="actions">
-          <button class="primary" id="font-import-decode-btn">Decode &amp; preview</button>
+          <button class="primary" id="font-import-decode-btn">${ICONS.search}Decode &amp; preview</button>
         </div>
         <p class="status" id="font-import-status"></p>
-      </fieldset>
+      </div>
     </div>
     <div>
-      <fieldset>
-        <legend>Metadata</legend>
+      <div class="card">
+        <h3 class="section-heading">Metadata</h3>
         <div id="font-import-metadata" class="note">Load and decode a font source to see metadata here.</div>
-      </fieldset>
-      <fieldset>
-        <legend>Glyph grid</legend>
+      </div>
+      <div class="card">
+        <h3 class="section-heading">Glyph grid</h3>
         <div id="font-import-glyph-grid" style="display:flex; flex-wrap:wrap; gap:6px; max-height: 480px; overflow:auto;"></div>
-      </fieldset>
+      </div>
     </div>
   </div>`;
 }
