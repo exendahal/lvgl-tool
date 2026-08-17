@@ -7,6 +7,7 @@ import { toCIdentifier } from '../lib/bytes';
 import { downloadBytes, downloadText } from './download';
 import { loadJson, saveJson } from '../lib/persist';
 import { ICONS } from './icons';
+import { isPrivateUseArea } from '../lib/unicode';
 
 const FONT_OPTIONS_KEY = 'lvgl-tool.font-options';
 
@@ -318,8 +319,8 @@ function renderGlyphGrid(container: HTMLDivElement, report: BuildFontReport): vo
     const h = Math.max(1, g.boxH);
     canvas.width = w;
     canvas.height = h;
-    canvas.style.width = Math.max(16, w * 2) + 'px';
-    canvas.style.height = Math.max(16, h * 2) + 'px';
+    canvas.style.width = Math.max(24, w * 3) + 'px';
+    canvas.style.height = Math.max(24, h * 3) + 'px';
     canvas.style.background = '#fff';
     canvas.style.border = '1px solid var(--border)';
     const ctx = canvas.getContext('2d')!;
@@ -338,7 +339,7 @@ function renderGlyphGrid(container: HTMLDivElement, report: BuildFontReport): vo
 
     const label = document.createElement('div');
     const cp = g.codepoint;
-    label.textContent = cp >= 0x20 && cp !== 0x7f ? String.fromCodePoint(cp) : `U+${cp.toString(16).toUpperCase()}`;
+    label.textContent = cp >= 0x20 && cp !== 0x7f && !isPrivateUseArea(cp) ? String.fromCodePoint(cp) : `U+${cp.toString(16).toUpperCase()}`;
 
     cell.appendChild(canvas);
     cell.appendChild(label);

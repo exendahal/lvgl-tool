@@ -396,6 +396,11 @@ details.hint p {
   text-align: center;
 }
 
+#font-glyph-grid canvas,
+#font-import-glyph-grid canvas {
+  image-rendering: pixelated;
+}
+
 .preview-box canvas {
   max-width: 100%;
   image-rendering: pixelated;

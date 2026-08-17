@@ -1,5 +1,6 @@
 import { parseFontCSource, type DecodedFontGlyph } from '../importer/parseFontCSource';
 import { ICONS } from './icons';
+import { isPrivateUseArea } from '../lib/unicode';
 
 export function renderFontImportPanelHtml(): string {
   return `
@@ -102,8 +103,8 @@ function renderGrid(container: HTMLDivElement, glyphs: DecodedFontGlyph[], bpp: 
     const h = Math.max(1, g.boxH);
     canvas.width = w;
     canvas.height = h;
-    canvas.style.width = Math.max(16, w * 2) + 'px';
-    canvas.style.height = Math.max(16, h * 2) + 'px';
+    canvas.style.width = Math.max(24, w * 3) + 'px';
+    canvas.style.height = Math.max(24, h * 3) + 'px';
     canvas.style.background = '#fff';
     canvas.style.border = '1px solid var(--border)';
     const ctx = canvas.getContext('2d')!;
@@ -121,7 +122,7 @@ function renderGrid(container: HTMLDivElement, glyphs: DecodedFontGlyph[], bpp: 
 
     const label = document.createElement('div');
     const cp = g.codepoint;
-    label.textContent = cp >= 0x20 && cp !== 0x7f && cp < 0x2ffff ? String.fromCodePoint(cp) : `U+${cp.toString(16).toUpperCase()}`;
+    label.textContent = cp >= 0x20 && cp !== 0x7f && !isPrivateUseArea(cp) ? String.fromCodePoint(cp) : `U+${cp.toString(16).toUpperCase()}`;
 
     cell.appendChild(canvas);
     cell.appendChild(label);
