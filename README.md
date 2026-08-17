@@ -90,3 +90,13 @@ npm run dev        # dev server at http://localhost:5173
 | `npm run build` | Typecheck, then produce a production build in `dist/` |
 | `npm run preview` | Serve the built `dist/` locally (after `npm run build`) |
 | `npm run typecheck` | Typecheck only, no build output |
+
+---
+
+## Support & Motivation
+
+Maintaining and improving this library takes time and effort.
+If you find it useful and would like to support future enhancements or ongoing maintenance,
+you can do so [here](https://buymemomo.com/exendahal).
+
+Thank you for using and supporting the project.

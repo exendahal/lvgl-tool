@@ -5,17 +5,17 @@
     <meta name="google-site-verification" content="kzYQY2lRzOp9eqYaVi8BvXgyC5pK0BxGulhitF3RwMU" />
     <link rel="icon" type="image/png" href="/favicon.png" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>LVGL Asset Converter — LVGL Image Converter & Viewer, Font Converter & Viewer</title>
-    <meta name="description" content="Free, open-source LVGL image converter and viewer, plus an LVGL font converter and viewer — 100% client-side, for LVGL v7, v8, and v9. Convert images and fonts to LVGL C arrays or binaries, or decode existing LVGL .c/.bin files back into a preview. Nothing you upload ever leaves your browser." />
+    <title>LVGL Asset Converter — Online LVGL Image & Font Converter and Generator</title>
+    <meta name="description" content="Free, open-source LVGL online image converter and generator, plus an LVGL online font converter and generator — 100% client-side, for LVGL v7, v8, and v9. Convert images and fonts to LVGL C arrays or binaries, or decode existing LVGL .c/.bin files back into a preview. Nothing you upload ever leaves your browser." />
     <link rel="canonical" href="https://exendahal.github.io/lvgl-tool/" />
 
     <meta property="og:type" content="website" />
-    <meta property="og:title" content="LVGL Asset Converter — Image & Font Converter and Viewer" />
-    <meta property="og:description" content="Free, open-source LVGL image converter and viewer, and LVGL font converter and viewer, for v7/v8/v9 — 100% client-side." />
+    <meta property="og:title" content="LVGL Asset Converter — Online Image & Font Converter and Generator" />
+    <meta property="og:description" content="Free, open-source LVGL online image converter/generator, and LVGL online font converter/generator, for v7/v8/v9 — 100% client-side." />
     <meta property="og:url" content="https://exendahal.github.io/lvgl-tool/" />
     <meta name="twitter:card" content="summary" />
-    <meta name="twitter:title" content="LVGL Asset Converter — Image & Font Converter and Viewer" />
-    <meta name="twitter:description" content="Free, open-source LVGL image converter and viewer, and LVGL font converter and viewer, for v7/v8/v9." />
+    <meta name="twitter:title" content="LVGL Asset Converter — Online Image & Font Converter and Generator" />
+    <meta name="twitter:description" content="Free, open-source LVGL online image converter/generator, and LVGL online font converter/generator, for v7/v8/v9." />
 
     <script type="application/ld+json">
       {
@@ -23,13 +23,13 @@
         "@type": "WebApplication",
         "name": "LVGL Asset Converter",
         "url": "https://exendahal.github.io/lvgl-tool/",
-        "description": "Free, open-source, 100% client-side tool that works as an LVGL image converter and viewer, and an LVGL font converter and viewer, for LVGL v7, v8, and v9. Converts image and font assets into LVGL-compatible C arrays or binaries, and can decode existing LVGL .c/.bin asset files back into a preview.",
+        "description": "Free, open-source, 100% client-side tool that works as an LVGL online image converter and generator, and an LVGL online font converter and generator, for LVGL v7, v8, and v9. Converts image and font assets into LVGL-compatible C arrays or binaries, and can decode existing LVGL .c/.bin asset files back into a preview.",
         "applicationCategory": "DeveloperApplication",
         "operatingSystem": "Any (runs in-browser)",
         "featureList": [
-          "LVGL image converter (PNG/JPG/BMP/SVG to LVGL C array or binary, v7/v8/v9)",
+          "LVGL image converter and generator (PNG/JPG/BMP/SVG to LVGL C array or binary, v7/v8/v9)",
           "LVGL image viewer (decode an existing LVGL image .c or .bin file back into a preview)",
-          "LVGL font converter (TTF/OTF/WOFF to lv_font_t, v7/v8/v9)",
+          "LVGL font converter and generator (TTF/OTF/WOFF to lv_font_t, v7/v8/v9)",
           "LVGL font viewer (decode an existing LVGL font .c file into a glyph grid preview)"
         ],
         "offers": {
@@ -37,6 +37,55 @@
           "price": "0",
           "priceCurrency": "USD"
         }
+      }
+    </script>
+
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "FAQPage",
+        "mainEntity": [
+          {
+            "@type": "Question",
+            "name": "Does this LVGL converter support LVGL v7, v8, and v9?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Yes. The image and font converters both target LVGL v7, v8, and v9, since the on-disk image and font formats changed between those major versions. A version selector at the top of the page gates which color formats and options are shown."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Is this the same as the official LVGL image/font converter?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "No, this is an independent, open-source alternative to the official lvgl.io/tools converter, built for teams who need to target a specific LVGL major version, or who want an inspectable client-side tool instead of a hosted black-box service."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Do I need to install anything to convert LVGL images or fonts?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "No installation is required. It runs entirely in your web browser — no Python scripts, no Node.js CLI tools, no server."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Is my uploaded image or font file sent to a server?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "No. All conversion happens client-side in your browser. Nothing you upload is ever sent anywhere."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Can I inspect or preview an existing LVGL .c image or font file?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Yes. The Image Import & Inspect and Font Import & Inspect tabs decode an existing LVGL image .c/.bin file or font .c file and render a preview, without needing the original source image or font."
+            }
+          }
+        ]
       }
     </script>
   </head>
@@ -47,11 +96,13 @@
            tab names/capabilities so it's accurate, not just SEO filler. -->
       <main style="max-width: 720px; margin: 2rem auto; padding: 0 1.5rem; font-family: system-ui, sans-serif; color: #292929; background: #f7f8fa;">
         <h1>LVGL Asset Converter</h1>
-        <p>A free, open-source <strong>LVGL image converter and viewer</strong>, and <strong>LVGL font converter and viewer</strong> — 100% client-side, for LVGL v7, v8, and v9. Nothing you upload ever leaves your browser.</p>
+        <p>A free, open-source <strong>LVGL online image converter and generator</strong>, and <strong>LVGL online font converter and generator</strong> — 100% client-side, for LVGL v7, v8, and v9. Nothing you upload ever leaves your browser.</p>
+        <p>LVGL's own image and font binary formats changed meaningfully across v7, v8, and v9, so a converted asset built for one version often won't compile — or worse, compiles but renders garbage — on another. This tool lets you pick the exact LVGL major version you're targeting and generates a matching <code>lv_img_dsc_t</code>/<code>lv_image_dsc_t</code> C array or binary, as an open, inspectable alternative to the official hosted converter.</p>
+        <h2>What you can do here</h2>
         <ul>
-          <li><strong>Image Converter</strong> — PNG/JPG/BMP/SVG to LVGL C array or binary</li>
+          <li><strong>Image Converter / Generator</strong> — PNG/JPG/BMP/SVG to LVGL C array or binary</li>
           <li><strong>Image Import &amp; Inspect (viewer)</strong> — decode an existing LVGL image .c or .bin file</li>
-          <li><strong>Font Converter</strong> — TTF/OTF/WOFF to <code>lv_font_t</code></li>
+          <li><strong>Font Converter / Generator</strong> — TTF/OTF/WOFF to <code>lv_font_t</code></li>
           <li><strong>Font Import &amp; Inspect (viewer)</strong> — decode an existing LVGL font .c file into a glyph grid</li>
         </ul>
         <p>Loading the app…</p>

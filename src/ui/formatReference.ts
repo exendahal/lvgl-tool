@@ -1,6 +1,16 @@
 export function renderFormatReference(): string {
   return `
   <div class="docs">
+    <h2>FAQ</h2>
+    <p><strong>Is this the same as the official LVGL converter?</strong> No — this is an
+    independent, open-source alternative to the official lvgl.io/tools converter, built for
+    teams who need to target a specific LVGL major version, or want an inspectable client-side
+    tool instead of a hosted black-box service.</p>
+    <p><strong>Do I need to install anything?</strong> No — it runs entirely in your browser, no
+    Python scripts, no Node.js CLI, no server.</p>
+    <p><strong>Is my file uploaded anywhere?</strong> No — all conversion happens client-side;
+    nothing you load into the tool is ever sent anywhere.</p>
+
     <h2>Why the version selector matters</h2>
     <p>LVGL's on-disk image and font formats changed meaningfully across v7, v8 and v9.
     Picking the wrong version's output for your firmware's actual LVGL version will fail to
