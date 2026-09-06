@@ -8,7 +8,8 @@
     "dev": "vite",
     "build": "tsc --noEmit && vite build",
     "preview": "vite preview",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "test": "esbuild \"src/**/*.test.ts\" --bundle --format=esm --out-extension:.js=.mjs --outdir=node_modules/.cache/test --log-level=warning --external:node:* && node --test node_modules/.cache/test"
   },
   "devDependencies": {
     "@types/opentype.js": "^1.3.10",

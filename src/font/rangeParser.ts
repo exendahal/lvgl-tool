@@ -78,3 +78,19 @@ export function combineCodepoints(...sets: Set<number>[]): number[] {
   for (const s of sets) for (const cp of s) combined.add(cp);
   return [...combined].sort((a, b) => a - b);
 }
+
+/** Collapses a code point list back into the compact "0x20-0x7E, 0xA9" form the range field
+ * accepts, so a font's detected coverage can be dropped straight into the input (and still
+ * hand-edited afterwards). */
+export function formatCodepointRanges(codepoints: number[]): string {
+  const sorted = [...new Set(codepoints)].sort((a, b) => a - b);
+  const hex = (n: number): string => '0x' + n.toString(16).toUpperCase();
+  const parts: string[] = [];
+  for (let i = 0; i < sorted.length; ) {
+    let end = i;
+    while (end + 1 < sorted.length && sorted[end + 1] === sorted[end] + 1) end++;
+    parts.push(end > i ? `${hex(sorted[i])}-${hex(sorted[end])}` : hex(sorted[i]));
+    i = end + 1;
+  }
+  return parts.join(', ');
+}

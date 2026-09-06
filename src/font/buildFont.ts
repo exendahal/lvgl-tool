@@ -1,5 +1,5 @@
 import type { LvglVersion } from '../lib/types';
-import { loadOpentypeFont, hasGlyph, getKerningPx, getFontMetricsPx } from './parseFont';
+import { loadOpentypeFont, hasGlyph, getGlyphName, getKerningPx, getFontMetricsPx } from './parseFont';
 import { registerCanvasFont, unregisterCanvasFont, rasterizeGlyph, quantizeCoverageToBpp } from './rasterize';
 import type { FontBuildResult, GlyphEntry, KernPair } from './types';
 
@@ -69,6 +69,7 @@ export async function buildFont(opts: BuildFontOptions): Promise<BuildFontReport
         ofsY: raster.ofsY,
         advWPx: raster.advanceWidthPx + opts.letterSpacingPx,
         bppLevels: quantizeCoverageToBpp(raster.coverage, opts.bpp),
+        name: getGlyphName(font, cp),
       });
     }
 

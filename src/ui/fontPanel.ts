@@ -1,5 +1,6 @@
 import type { LvglVersion } from '../lib/types';
-import { RANGE_PRESETS, parseUnicodeRangeField, parseExplicitCharList, combineCodepoints, MAX_CODEPOINTS } from '../font/rangeParser';
+import { RANGE_PRESETS, parseUnicodeRangeField, parseExplicitCharList, combineCodepoints, formatCodepointRanges, MAX_CODEPOINTS } from '../font/rangeParser';
+import { loadOpentypeFont, listFontCodepoints } from '../font/parseFont';
 import { buildFont, type BuildFontReport } from '../font/buildFont';
 import { generateFontCFile } from '../font/encodeFontC';
 import { encodeFontBinary } from '../font/encodeFontBinary';
@@ -7,7 +8,7 @@ import { toCIdentifier } from '../lib/bytes';
 import { downloadBytes, downloadText } from './download';
 import { loadJson, saveJson } from '../lib/persist';
 import { ICONS } from './icons';
-import { isPrivateUseArea } from '../lib/unicode';
+import { renderGlyphGrid } from './glyphGrid';
 
 const FONT_OPTIONS_KEY = 'lvgl-tool.font-options';
 
@@ -47,7 +48,11 @@ export function renderFontPanelHtml(): string {
         <h3 class="section-heading">Character coverage</h3>
         <div class="field">
           <label>Range presets</label>
-          <div>${presetButtons}</div>
+          <div>${presetButtons}<button type="button" class="secondary" id="font-range-all-btn" disabled style="margin: 0 0.3rem 0.3rem 0;">All glyphs in font</button></div>
+        </div>
+        <div class="field">
+          <label>Available in this font</label>
+          <p class="note" id="font-available-ranges" style="margin:0 0 0.6rem; word-break:break-all; max-height:6rem; overflow:auto;">Load a font file to see the ranges it maps.</p>
         </div>
         <div class="field">
           <label for="font-range-input">Unicode range (e.g. 0x20-0x7E, 0xA9)</label>
@@ -143,6 +148,8 @@ export function wireFontPanel(root: ParentNode, getVersion: () => LvglVersion): 
   const mergeInput = $<HTMLInputElement>('font-merge-input');
   const fileInfo = $<HTMLParagraphElement>('font-file-info');
 
+  const rangeAllBtn = $<HTMLButtonElement>('font-range-all-btn');
+  const availableRanges = $<HTMLParagraphElement>('font-available-ranges');
   const rangeInput = $<HTMLInputElement>('font-range-input');
   const symbolsInput = $<HTMLInputElement>('font-symbols-input');
   const sizeInput = $<HTMLInputElement>('font-size-input');
@@ -191,6 +198,8 @@ export function wireFontPanel(root: ParentNode, getVersion: () => LvglVersion): 
 
   let primaryBytes: ArrayBuffer | null = null;
   let mergeBytes: ArrayBuffer | null = null;
+  let primaryCodepoints: number[] = [];
+  let mergeCodepoints: number[] = [];
   let lastReport: BuildFontReport | null = null;
   let lastCFile: { c: string; h: string } | null = null;
   let lastBinary: Uint8Array | null = null;
@@ -204,24 +213,70 @@ export function wireFontPanel(root: ParentNode, getVersion: () => LvglVersion): 
     convertBtn.disabled = !primaryBytes;
   }
 
+  /** Reads what the font actually maps so the coverage fields can be filled from the font itself
+   * rather than from the user's guess at its Unicode range. */
+  async function detectCodepoints(bytes: ArrayBuffer): Promise<number[]> {
+    try {
+      return listFontCodepoints(await loadOpentypeFont(bytes));
+    } catch {
+      return [];
+    }
+  }
+
+  function allFontCodepoints(): number[] {
+    return combineCodepoints(new Set(primaryCodepoints), new Set(mergeEnable.checked ? mergeCodepoints : []));
+  }
+
+  function describeCoverage(): string {
+    const all = allFontCodepoints();
+    if (all.length === 0) return 'No mapped code points detected — set the range manually.';
+    const range = `U+${all[0].toString(16).toUpperCase()}–U+${all[all.length - 1].toString(16).toUpperCase()}`;
+    return `${all.length} mapped code point(s), ${range}.`;
+  }
+
+  /** Fills the range field from the font's own coverage. Done automatically on load because the
+   * previous range belonged to the previous font, and a stale ASCII default silently drops every
+   * icon in an icon font. Skipped for fonts too large to rasterize client-side. */
+  function applyFontCoverage(auto: boolean): void {
+    const all = allFontCodepoints();
+    rangeAllBtn.disabled = all.length === 0;
+    availableRanges.textContent = all.length > 0 ? `${all.length} code point(s): ${formatCodepointRanges(all)}` : primaryBytes ? 'No mapped code points detected in this font.' : 'Load a font file to see the ranges it maps.';
+    if (all.length === 0) return;
+    if (auto && all.length > MAX_CODEPOINTS) return;
+    if (all.length > MAX_CODEPOINTS) {
+      setStatus(`This font maps ${all.length} code points, above the ${MAX_CODEPOINTS} client-side cap — narrow the range by hand.`, 'error');
+      return;
+    }
+    rangeInput.value = formatCodepointRanges(all);
+    persistFontOptions();
+  }
+
   fileInput.addEventListener('change', async () => {
     const file = fileInput.files?.[0];
     if (!file) return;
     primaryBytes = await file.arrayBuffer();
+    primaryCodepoints = await detectCodepoints(primaryBytes);
     const base = toCIdentifier(file.name.replace(/\.[^/.]+$/, ''));
     varNameInput.value = base;
-    fileInfo.textContent = `${file.name} loaded.`;
+    applyFontCoverage(true);
+    fileInfo.textContent = `${file.name} loaded — ${describeCoverage()}`;
     updateConvertEnabled();
   });
 
+  rangeAllBtn.addEventListener('click', () => applyFontCoverage(false));
+
   mergeEnable.addEventListener('change', () => {
     mergeRow.style.display = mergeEnable.checked ? 'block' : 'none';
+    applyFontCoverage(true);
   });
 
   mergeInput.addEventListener('change', async () => {
     const file = mergeInput.files?.[0];
     if (!file) return;
     mergeBytes = await file.arrayBuffer();
+    mergeCodepoints = await detectCodepoints(mergeBytes);
+    applyFontCoverage(true);
+    fileInfo.textContent = `${describeCoverage()}`;
   });
 
   function onVersionChange(): void {
@@ -267,7 +322,7 @@ export function wireFontPanel(root: ParentNode, getVersion: () => LvglVersion): 
         mergeSource: mergeEnable.checked && mergeBytes ? { bytes: mergeBytes } : undefined,
       });
       lastReport = report;
-      renderGlyphGrid(glyphGrid, report);
+      renderGlyphGrid(glyphGrid, report.result.glyphs.map((g) => ({ ...g, levels: g.bppLevels })), report.result.bpp);
 
       if (outputModeSelect.value === 'c') {
         lastCFile = generateFontCFile(report.result);
@@ -304,45 +359,4 @@ export function wireFontPanel(root: ParentNode, getVersion: () => LvglVersion): 
 
   onVersionChange();
   return { onVersionChange };
-}
-
-function renderGlyphGrid(container: HTMLDivElement, report: BuildFontReport): void {
-  container.innerHTML = '';
-  for (const g of report.result.glyphs) {
-    const cell = document.createElement('div');
-    cell.style.textAlign = 'center';
-    cell.style.fontSize = '0.7rem';
-    cell.style.color = 'var(--muted)';
-
-    const canvas = document.createElement('canvas');
-    const w = Math.max(1, g.boxW);
-    const h = Math.max(1, g.boxH);
-    canvas.width = w;
-    canvas.height = h;
-    canvas.style.width = Math.max(24, w * 3) + 'px';
-    canvas.style.height = Math.max(24, h * 3) + 'px';
-    canvas.style.background = '#fff';
-    canvas.style.border = '1px solid var(--border)';
-    const ctx = canvas.getContext('2d')!;
-    const imgData = ctx.createImageData(w, h);
-    for (let i = 0; i < w * h; i++) {
-      const level = g.bppLevels[i] ?? 0;
-      const maxLevel = (1 << report.result.bpp) - 1;
-      const coverage = maxLevel > 0 ? level / maxLevel : 0;
-      const shade = Math.round(255 * (1 - coverage));
-      imgData.data[i * 4] = shade;
-      imgData.data[i * 4 + 1] = shade;
-      imgData.data[i * 4 + 2] = shade;
-      imgData.data[i * 4 + 3] = 255;
-    }
-    ctx.putImageData(imgData, 0, 0);
-
-    const label = document.createElement('div');
-    const cp = g.codepoint;
-    label.textContent = cp >= 0x20 && cp !== 0x7f && !isPrivateUseArea(cp) ? String.fromCodePoint(cp) : `U+${cp.toString(16).toUpperCase()}`;
-
-    cell.appendChild(canvas);
-    cell.appendChild(label);
-    container.appendChild(cell);
-  }
 }

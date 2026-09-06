@@ -1,6 +1,6 @@
-import { parseFontCSource, type DecodedFontGlyph } from '../importer/parseFontCSource';
+import { parseFontCSource } from '../importer/parseFontCSource';
 import { ICONS } from './icons';
-import { isPrivateUseArea } from '../lib/unicode';
+import { renderGlyphGrid } from './glyphGrid';
 
 export function renderFontImportPanelHtml(): string {
   return `
@@ -84,48 +84,7 @@ export function wireFontImportPanel(root: ParentNode): void {
       <div><strong>Bitmap array size (flash footprint):</strong> ${f.glyphBitmapByteSize.toLocaleString()} bytes</div>
       <p class="note">${f.versionNote}</p>
     `;
-    renderGrid(gridEl, f.glyphs, f.bpp);
+    renderGlyphGrid(gridEl, f.glyphs, f.bpp);
     setStatus(`Decoded ${f.glyphs.length} glyph(s) successfully.`, 'ok');
   });
-}
-
-function renderGrid(container: HTMLDivElement, glyphs: DecodedFontGlyph[], bpp: number): void {
-  container.innerHTML = '';
-  const maxLevel = (1 << bpp) - 1;
-  for (const g of glyphs) {
-    const cell = document.createElement('div');
-    cell.style.textAlign = 'center';
-    cell.style.fontSize = '0.7rem';
-    cell.style.color = 'var(--muted)';
-
-    const canvas = document.createElement('canvas');
-    const w = Math.max(1, g.boxW);
-    const h = Math.max(1, g.boxH);
-    canvas.width = w;
-    canvas.height = h;
-    canvas.style.width = Math.max(24, w * 3) + 'px';
-    canvas.style.height = Math.max(24, h * 3) + 'px';
-    canvas.style.background = '#fff';
-    canvas.style.border = '1px solid var(--border)';
-    const ctx = canvas.getContext('2d')!;
-    const imgData = ctx.createImageData(w, h);
-    for (let i = 0; i < w * h; i++) {
-      const level = g.levels[i] ?? 0;
-      const coverage = maxLevel > 0 ? level / maxLevel : 0;
-      const shade = Math.round(255 * (1 - coverage));
-      imgData.data[i * 4] = shade;
-      imgData.data[i * 4 + 1] = shade;
-      imgData.data[i * 4 + 2] = shade;
-      imgData.data[i * 4 + 3] = 255;
-    }
-    ctx.putImageData(imgData, 0, 0);
-
-    const label = document.createElement('div');
-    const cp = g.codepoint;
-    label.textContent = cp >= 0x20 && cp !== 0x7f && !isPrivateUseArea(cp) ? String.fromCodePoint(cp) : `U+${cp.toString(16).toUpperCase()}`;
-
-    cell.appendChild(canvas);
-    cell.appendChild(label);
-    container.appendChild(cell);
-  }
 }
