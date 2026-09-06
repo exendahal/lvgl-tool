@@ -10,6 +10,9 @@ export interface GlyphEntry {
   advWPx: number;
   /** Quantized coverage values (0..2^bpp-1), boxW*boxH, row-major — not yet bit-packed. */
   bppLevels: Uint8Array;
+  /** The source font's own glyph name from its `post` table, when it has one — preview only,
+   * nothing in the LVGL output uses it. */
+  name?: string;
 }
 
 export interface KernPair {

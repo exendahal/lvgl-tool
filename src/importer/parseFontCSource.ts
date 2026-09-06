@@ -9,6 +9,9 @@ export interface DecodedFontGlyph {
   advWPx: number;
   /** 0..2^bpp-1 coverage levels, row-major, boxW*boxH. */
   levels: Uint8Array;
+  /** Recovered from this tool's own `name="..."` glyph comment, when the .c was generated here.
+   * The LVGL font format itself stores no names, so this is absent for every other source. */
+  name?: string;
 }
 
 export interface DecodedFont {
@@ -25,6 +28,16 @@ export interface DecodedFont {
 }
 
 export type ParseFontResult = { ok: true; font: DecodedFont } | { ok: false; error: string };
+
+/** Recovers glyph names from the `/* U+F023 name="lock" *\/` comments this tool emits — the
+ * format has no field for them, so a .c from anywhere else simply yields an empty map. */
+function extractGlyphNames(src: string): Map<number, string> {
+  const names = new Map<number, string>();
+  for (const m of src.matchAll(/U\+([0-9a-fA-F]+)\s+name="([^"]+)"/g)) {
+    names.set(parseInt(m[1], 16), m[2]);
+  }
+  return names;
+}
 
 function stripComments(src: string): string {
   return src.replace(/\/\*[\s\S]*?\*\//g, ' ').replace(/\/\/.*$/gm, ' ');
@@ -59,6 +72,7 @@ function extractReferencedName(src: string, field: string): string | null {
  */
 export function parseFontCSource(src: string): ParseFontResult {
   const cleaned = stripComments(src);
+  const glyphNames = extractGlyphNames(src);
 
   const dscMatch = cleaned.match(/lv_font_fmt_txt_dsc_t\s+(\w+)\s*=\s*\{([\s\S]*?)\};/);
   if (!dscMatch) {
@@ -177,7 +191,7 @@ export function parseFontCSource(src: string): ParseFontResult {
       const slice = bitmapBytes.slice(g.bitmapIndex, g.bitmapIndex + byteLen);
       levels = unpackRowAlignedBits(slice, g.boxW, g.boxH, bpp);
     }
-    glyphs.push({ codepoint, boxW: g.boxW, boxH: g.boxH, ofsX: g.ofsX, ofsY: g.ofsY, advWPx: g.advW / 16, levels });
+    glyphs.push({ codepoint, boxW: g.boxW, boxH: g.boxH, ofsX: g.ofsX, ofsY: g.ofsY, advWPx: g.advW / 16, levels, name: glyphNames.get(codepoint) });
   });
 
   if (glyphs.length === 0) {

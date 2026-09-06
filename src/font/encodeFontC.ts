@@ -16,6 +16,10 @@ import type { FontBuildResult } from './types';
  * verified against a specific LVGL source checkout in this environment. If glyphs render as
  * blank boxes or wrong characters, check the cmap section first against your LVGL point release.
  */
+function formatCodepointComment(codepoint: number): string {
+  return `U+${codepoint.toString(16).toUpperCase().padStart(4, '0')}`;
+}
+
 export function generateFontCFile(result: FontBuildResult): { c: string; h: string } {
   const varName = toCIdentifier(result.variableName, 'font');
   const guardMacro = `${varName.toUpperCase()}_INCLUDED`;
@@ -30,7 +34,12 @@ export function generateFontCFile(result: FontBuildResult): { c: string; h: stri
       packed = packRowAlignedBits(g.bppLevels, g.boxW, g.boxH, result.bpp).data;
     }
     const advW16 = Math.round(g.advWPx * 16);
-    glyphDscEntries.push(`    {.bitmap_index = ${runningOffset}, .adv_w = ${advW16}, .box_w = ${g.boxW}, .box_h = ${g.boxH}, .ofs_x = ${g.ofsX}, .ofs_y = ${g.ofsY}},`);
+    // The LVGL font format has nowhere to store a glyph name, so it is carried as a comment —
+    // free at compile time, and the only way this tool can show names again after re-importing
+    // its own .c. The `name=` marker keeps it distinguishable from lv_font_conv's own
+    // /* U+0041 "A" */ comments, which quote the character rather than the name.
+    const nameComment = g.name ? ` /* ${formatCodepointComment(g.codepoint)} name="${g.name.replace(/[^ -~"]/g, '')}" */` : ` /* ${formatCodepointComment(g.codepoint)} */`;
+    glyphDscEntries.push(`    {.bitmap_index = ${runningOffset}, .adv_w = ${advW16}, .box_w = ${g.boxW}, .box_h = ${g.boxH}, .ofs_x = ${g.ofsX}, .ofs_y = ${g.ofsY}},${nameComment}`);
     bitmapChunks.push(packed);
     runningOffset += packed.length;
   });
