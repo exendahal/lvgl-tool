@@ -1,12 +1,15 @@
 name: Deploy to GitHub Pages
 
-# Publishes on every tag push, e.g. `git tag v1.2.0 && git push origin v1.2.0`.
-# No workflow_dispatch trigger: manual runs default to `main`, which the github-pages
-# environment's tag-only deployment rule rejects — tag pushes are the only supported trigger.
+# Publishes on every `v*` tag push, e.g. `git tag v1.2.0 && git push origin v1.2.0`.
+# The pattern must stay in sync with the github-pages environment's deployment tag policy,
+# which only permits `v*`: a tag matching here but not there is rejected at the environment
+# gate seconds after the run starts, with no build log to explain it.
+# No workflow_dispatch trigger: manual runs default to `main`, and the environment's policy
+# is the authority on which refs may deploy — tag pushes are the only supported trigger.
 on:
   push:
     tags:
-      - '*'
+      - 'v*'
 
 permissions:
   contents: read
