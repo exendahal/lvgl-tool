@@ -1,0 +1,35 @@
+name: CI
+
+# Verifies the branch builds before it can be merged. Also runs on pushes to the long-lived
+# branches so the merge commit itself is checked, not just the PR head it was tested as.
+on:
+  pull_request:
+    branches: [main, develop]
+  push:
+    branches: [main, develop]
+
+permissions:
+  contents: read
+
+# A new push to a PR supersedes the run in flight for it — nothing depends on the older result.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - run: npm ci
+
+      - run: npm test
+
+      # Also runs `tsc --noEmit`, so this covers typecheck as well as the bundle.
+      - run: npm run build
